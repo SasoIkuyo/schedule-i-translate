@@ -1,16 +1,29 @@
 using System.Net.Http;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 namespace ScheduleISpanish;
 
-public sealed record UpdateSettings(bool CheckForUpdates=false,bool PreviewNotification=false)
+public sealed record UpdateSettings(bool CheckForUpdates=false,bool PreviewNotification=false,
+    bool AllowInGameUpdates=true,bool AutoDownloadUpdates=false,bool ShowUpdateNotice=true,
+    float NoticeOpacity=0.58f,float NoticeScale=1)
 {
     public static UpdateSettings Load(string directory,bool enabledByDefault)
     {
         Directory.CreateDirectory(directory);
         string path=Path.Combine(directory,"updates.json");
         if(!File.Exists(path)) File.WriteAllText(path,JsonSerializer.Serialize(new UpdateSettings(enabledByDefault),new JsonSerializerOptions {WriteIndented=true}));
-        return JsonSerializer.Deserialize<UpdateSettings>(File.ReadAllText(path)) ?? throw new InvalidDataException("Invalid updates.json");
+        var settings=JsonSerializer.Deserialize<UpdateSettings>(File.ReadAllText(path)) ?? throw new InvalidDataException("Invalid updates.json");
+        if(!float.IsFinite(settings.NoticeOpacity) || settings.NoticeOpacity is <0.15f or >0.9f ||
+           !float.IsFinite(settings.NoticeScale) || settings.NoticeScale is <0.6f or >1.5f)
+            throw new InvalidDataException("NoticeOpacity must be 0.15-0.9; NoticeScale must be 0.6-1.5");
+        var existing=JsonNode.Parse(File.ReadAllText(path))?.AsObject() ?? throw new InvalidDataException("Invalid updates.json");
+        var defaults=JsonSerializer.SerializeToNode(settings)!.AsObject();
+        bool changed=false;
+        foreach(var field in defaults)
+            if(!existing.ContainsKey(field.Key)) { existing[field.Key]=JsonNode.Parse(field.Value!.ToJsonString()); changed=true; }
+        if(changed) File.WriteAllText(path,existing.ToJsonString(new JsonSerializerOptions {WriteIndented=true}));
+        return settings;
     }
 }
 

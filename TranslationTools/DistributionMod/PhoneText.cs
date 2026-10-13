@@ -17,6 +17,10 @@ internal static class PhoneText
     internal static bool IsPhone(Text label)
     {
         if(label.canvas==null || label.canvas.renderMode!=RenderMode.WorldSpace) return false;
+        // Quantity buttons use a special oversized font with intentional overflow.
+        // The SDF mirror's autosize floor and ellipsis clip these 40x40 glyphs.
+        // Preserve the native Text mesh, font and overflow on symbol buttons.
+        if((label.text.Trim() is "+" or "-" or "−") && label.GetComponentInParent<Button>()!=null) return false;
         // Editable fields need the original glyph/caret geometry maintained by InputField.
         if(label.GetComponentInParent<InputField>()!=null || label.GetComponentInParent<Dropdown>()!=null || label.GetComponentInParent<Dropdown.DropdownItem>()!=null) return false;
         var parent=label.transform;
@@ -85,6 +89,7 @@ internal static class PhoneText
         try
         {
             if(!mirrors.TryGetValue(__instance.GetInstanceID(),out var mirror) || mirror==null) return;
+            if(!IsPhone(__instance)) { Prepare(__instance); return; }
             Sync(__instance,mirror);
             // Clear only after the replacement is ready. No duplicate text meshes.
             if(mirror.isActiveAndEnabled) __0.Clear();
@@ -100,7 +105,10 @@ internal static class PhoneText
             // Run after Text.text has committed the new value, before canvas rebuilding.
             // Numeric fields are just as important as translated labels here.
             if(mirrors.TryGetValue(__instance.GetInstanceID(),out var mirror) && mirror!=null)
+            {
+                if(!IsPhone(__instance)) { Prepare(__instance); return; }
                 Sync(__instance,mirror);
+            }
         }
         catch(Exception ex) { if(errors++<3) MelonLoader.MelonLogger.Warning("Phone value update: "+ex.Message); }
     }

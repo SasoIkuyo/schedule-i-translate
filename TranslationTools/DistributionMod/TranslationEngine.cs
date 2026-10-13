@@ -109,7 +109,9 @@ public sealed class TranslationEngine
 
     public string Translate(string? source) => Translate(source,0);
 
-    private string Translate(string? source,int depth)
+    private string Translate(string? source,int depth) => string.IsNullOrEmpty(source) ? source ?? "" : PlaceNames.IsName(source) ? source : PlaceNames.Restore(source,TranslateCore(source,depth));
+
+    private string TranslateCore(string? source,int depth)
     {
         if (string.IsNullOrEmpty(source) || source.Length>16000) return source ?? "";
         if(spanishGrammar && RankLabels.TrySpanish(source,out var rank)) return cache.TryGetValue(source,out var cachedRank) && cachedRank==rank ? cachedRank : Remember(source,rank);
@@ -168,7 +170,7 @@ public sealed class TranslationEngine
                     string captured=match.Groups[$"P{i}"].Value;
                     // Translate known item/region labels, preserving unknown names and amounts.
                     string slot=template.Tokens[i];
-                    string value=slot is "<LOCATION>" or "<REGION>" or "<PRODUCT>" or "<PROPERTY>" or "<BUSINESS>" or "<VEHICLE>" or "<QUALITY>" ? exact.GetValueOrDefault(captured,captured) : captured;
+                    string value=slot is "<PRODUCT>" or "<VEHICLE>" or "<QUALITY>" ? exact.GetValueOrDefault(captured,captured) : captured;
                     if(spanishGrammar && slot=="<TIME>") value=SpanishGrammar.TranslateTimeSpan(value);
                     result=result.Replace(slot,value,StringComparison.Ordinal);
                 }

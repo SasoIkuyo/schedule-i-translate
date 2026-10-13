@@ -167,6 +167,8 @@ Source and tests: [source branch](https://github.com/SasoIkuyo/schedule-i-transl
 
 | Versión / Version | Cambios principales | Main changes |
 | --- | --- | --- |
+| [1.4.6](https://github.com/SasoIkuyo/schedule-i-translate/releases/tag/v1.4.6) | Nombres de lugares protegidos, botones + y - nativos, aviso transparente, actualización desde el juego y JSON para Mod Manager. | Protected place names, native + and - buttons, translucent notice, in-game updates and Mod Manager JSON settings. |
+| [1.4.5](https://github.com/SasoIkuyo/schedule-i-translate/releases/tag/v1.4.5) | 533 traducciones nuevas integradas y comprobación de actualizaciones. | 533 new embedded translations and update checking. |
 | [1.4.4](https://github.com/SasoIkuyo/schedule-i-translate/releases/tag/v1.4.4) | Números romanos protegidos en **todos los idiomas**, con rechazo de caché incorrecta. Los nombres de rango se traducen localmente en español y mediante Google en los demás idiomas. | Roman numerals protected in **all languages**, with invalid-cache filtering. Rank names use local Spanish translations or Google for other languages. |
 | [1.4.3](https://github.com/SasoIkuyo/schedule-i-translate/releases/tag/v1.4.3) | Reutilización del texto visual de filas clonadas; desplegables con texto nativo. Avisos de destino y espera traducidos. | Reuse cloned text mirrors; native dropdown rendering. Translated destination and waiting prompts. |
 | [1.4.2](https://github.com/SasoIkuyo/schedule-i-translate/releases/tag/v1.4.2) | Actualización de texto visual al cambiar valores; contraoferta y campos editables con texto nativo. Botones «Sí» y «Contraoferta». | Refresh phone mirrors when values change; native counteroffer and editable fields. Corrected Spanish buttons. |
@@ -177,15 +179,40 @@ Source and tests: [source branch](https://github.com/SasoIkuyo/schedule-i-transl
 | [1.3.0](https://github.com/SasoIkuyo/schedule-i-translate/releases/tag/v1.3.0) | Bloques de misiones, diálogos variables y correcciones de cultivo y nombres. | Mission blocks, variable dialogue and cultivation/name corrections. |
 
 
-## Aviso de actualizaciones / Update notifications (1.4.5)
-
-Al iniciar, Online consulta las publicaciones de GitHub en segundo plano y muestra un aviso si hay una versi?n superior con ZIP para la variante instalada, incluidas las versiones preliminares publicadas. Permite abrir las descargas o cerrar el aviso. No instala actualizaciones autom?ticamente. Si falla la conexi?n, el juego contin?a normalmente.
-
-`UserData/ScheduleISpanish/updates.json`: `CheckForUpdates` es `true` por defecto en Online y `false` en Offline. Offline sigue traduciendo sin conexi?n; activar esta opci?n habilita una consulta de actualizaciones al iniciar. `PreviewNotification: true` muestra un aviso de prueba sin necesitar una versi?n nueva; vuelve a `false` despu?s de probar.
-
-Online checks GitHub releases in the background at startup and displays a dismissible notice when a newer version has a ZIP for the installed variant, including published previews. The download button opens the releases page. Updates are installed manually. Network failures do not stop translation. Set `CheckForUpdates` in `UserData/ScheduleISpanish/updates.json` to enable or disable checking (Online default: true; Offline default: false). `PreviewNotification: true` displays a test notice; restore false after testing.
-
-
 ## 1.4.5
 
 533 traducciones adicionales integradas (12.295 entradas) y aviso opcional de nuevas versiones. / 533 additional embedded Spanish translations (12,295 entries) and update notifications.
+
+## Actualizaciones y Mod Manager / Updates and Mod Manager
+
+Desde la 1.4.6, el aviso tiene fondo semitransparente y un botón **Actualizar**: descarga el ZIP oficial, comprueba SHA-256, variante y versión de la DLL. Cuando cierres el juego, un instalador oculto reemplaza la DLL de forma atómica y conserva la anterior en `UserData/ScheduleISpanish/Updates/<variante>/previous.dll`. La versión nueva se carga al abrir el juego otra vez. No es necesario abrir GitHub ni ejecutar scripts manualmente; solo distribuyes nuestra DLL. El mod genera internamente un script de PowerShell para instalarla después del cierre. No cierra el juego ni toca partidas, ajustes o cachés.
+
+La consulta se realiza una vez al iniciar e incluye versiones preliminares publicadas con ZIP para tu variante. Offline traduce sin conexión: su consulta de actualizaciones está desactivada por defecto. Para pasar de la 1.4.5 a la 1.4.6 hay que instalar la DLL manualmente una vez; la actualización desde el juego funciona a partir de la 1.4.6.
+
+Configuración: `UserData/ScheduleISpanish/updates.json`. Si está instalado **Mod Manager & Phone App 2.2.x**, el mod registra automáticamente esta ruta en su editor JSON. También puedes asignarla manualmente al mod. Mod Manager es opcional. Los ajustes del aviso se recargan cada dos segundos; si el JSON no es válido, se conservan los últimos ajustes válidos.
+
+```json
+{
+  "CheckForUpdates": true,
+  "PreviewNotification": false,
+  "AllowInGameUpdates": true,
+  "AutoDownloadUpdates": false,
+  "ShowUpdateNotice": true,
+  "NoticeOpacity": 0.58,
+  "NoticeScale": 1.0
+}
+```
+
+| Ajuste / Setting | Efecto / Effect |
+| --- | --- |
+| `CheckForUpdates` | Consulta al iniciar; `true` en Online, `false` en Offline por defecto. / Startup check; Online default true, Offline default false. |
+| `AllowInGameUpdates` | Activa el botón Actualizar; si es false, abre la descarga manual. / Enable in-game installation; false opens the download page. |
+| `AutoDownloadUpdates` | Descarga sin pulsar el botón cuando hay novedades; requiere las dos opciones anteriores. Predeterminado false. Instala al cerrar. / Download automatically when an update is found; requires checking and in-game updates. Default false; installs after exit. |
+| `ShowUpdateNotice` | Mostrar u ocultar el aviso. / Show or hide the notice. |
+| `NoticeOpacity` | Opacidad del fondo, de 0.15 a 0.9. / Background opacity from 0.15 to 0.9. |
+| `NoticeScale` | Tamaño del aviso, de 0.6 a 1.5. / Notice size from 0.6 to 1.5. |
+| `PreviewNotification` | Mostrar un aviso de diseño de prueba; no descarga ninguna versión ficticia. / Show a design preview; never downloads a fictitious version. |
+
+El estado de instalación se guarda en `UserData/ScheduleISpanish/Updates/<variante>/status.txt`. Si falla la verificación o la instalación, la DLL instalada se conserva. Para recuperar una versión anterior, cierra el juego y copia `previous.dll` a `Mods`, renombrándola `ScheduleTranslate.dll` (Online) o `ScheduleISpanish.dll` (Offline).
+
+**English:** Version 1.4.6 adds a translucent update notice and an **Update** button. The official ZIP is downloaded and checked for SHA-256, variant and assembly version. A hidden PowerShell helper waits for game exit, atomically replaces the DLL and keeps a backup. The game is never closed automatically. Saves, settings and translation caches are preserved. Install 1.4.6 manually once to enable future in-game updates. JSON settings are registered with the optional Mod Manager & Phone App 2.2.x editor and reloaded every two seconds. Invalid edits retain the last valid settings. Offline checks remain disabled by default; automatic downloading is opt-in.

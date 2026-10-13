@@ -8,9 +8,9 @@ using System.Text.Json;
 using System.IO.Compression;
 
 #if ONLINE
-[assembly: MelonInfo(typeof(ScheduleISpanish.SpanishMod),"Schedule I Translate Online","1.4.5","Saso")]
+[assembly: MelonInfo(typeof(ScheduleISpanish.SpanishMod),"Schedule I Translate Online","1.4.6","Saso")]
 #else
-[assembly: MelonInfo(typeof(ScheduleISpanish.SpanishMod),"Schedule I Spanish Offline","1.4.5","Saso")]
+[assembly: MelonInfo(typeof(ScheduleISpanish.SpanishMod),"Schedule I Spanish Offline","1.4.6","Saso")]
 #endif
 [assembly: MelonGame("TVGS","Schedule I")]
 
@@ -21,6 +21,19 @@ public sealed class SpanishMod : MelonMod
     private Task<Version?>? updateCheck;
     private string? availableVersion;
     private bool updateDismissed;
+    private UpdateNotice? updateNotice;
+    private UpdateSettings updateSettings=new();
+    private string updateDirectory="";
+    private DateTime settingsWrite,nextSettingsRead;
+    private Task? installTask;
+    private bool updateScheduled,automaticRequested;
+#if ONLINE
+    private const string UpdateVariant="Online";
+    private const bool DefaultUpdateChecks=true;
+#else
+    private const string UpdateVariant="Offline";
+    private const bool DefaultUpdateChecks=false;
+#endif
     private static TranslationEngine? engine;
     [ThreadStatic] private static bool replacing;
     private static int errors;
@@ -66,7 +79,9 @@ public sealed class SpanishMod : MelonMod
                 const bool defaultUpdates=false;
                 const string variant="Offline";
 #endif
-                var updates=UpdateSettings.Load(parent,defaultUpdates);
+                updateDirectory=parent;
+                var updates=updateSettings=UpdateSettings.Load(parent,defaultUpdates);
+                settingsWrite=File.GetLastWriteTimeUtc(Path.Combine(parent,"updates.json"));
                 if(updates.PreviewNotification) availableVersion="PRUEBA / TEST";
                 if(updates.CheckForUpdates)
                     updateCheck=Task.Run(()=>UpdateChecker.CheckAsync(typeof(SpanishMod).Assembly.GetName().Version!,variant));
@@ -80,6 +95,13 @@ public sealed class SpanishMod : MelonMod
             if(File.Exists(Path.Combine(parent,"CaptureMissing.flag")))
                 capture=new StreamWriter(Path.Combine(parent,"missing-runtime.jsonl"),append:true,System.Text.Encoding.UTF8,65536);
             var patcher=new HarmonyLib.Harmony("saso.schedule.spanish");
+            try
+            {
+                var propertyType=AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(a=>a.GetName().Name=="Assembly-CSharp")?.GetType("Il2CppScheduleOne.Property.Property");
+                var nameGetter=propertyType==null ? null : AccessTools.PropertyGetter(propertyType,"PropertyName");
+                if(nameGetter!=null) patcher.Patch(nameGetter,postfix:new HarmonyMethod(typeof(SpanishMod).GetMethod(nameof(RegisterPropertyName),BindingFlags.Static|BindingFlags.NonPublic)));
+            }
+            catch(Exception ex) { LoggerInstance.Warning("Property name protection: "+ex.Message); }
             var prefix=new HarmonyMethod(typeof(SpanishMod).GetMethod(nameof(TextPrefix),BindingFlags.Static|BindingFlags.NonPublic));
             int hooks=0;
             // Only three text classes are inspected. No scene scans or per-frame polling.
@@ -153,10 +175,12 @@ public sealed class SpanishMod : MelonMod
         catch(Exception ex) { Warn(ex); }
     }
 
+    private static void RegisterPropertyName(string __result) { if(__result!=null) PlaceNames.Register(__result); }
+
     private static void TextPrefix(object __instance,ref string __0)
     {
         if(engine==null || replacing || string.IsNullOrEmpty(__0)) return;
-        if(__instance is TMP_Text phoneMirror && PhoneText.IsMirror(phoneMirror)) return;
+        if(__instance is TMP_Text phoneMirror && (PhoneText.IsMirror(phoneMirror) || UpdateNotice.IsLabel(phoneMirror))) return;
         if(dialogueTarget!=null && __instance is TMP_Text tmp && tmp.GetInstanceID()==dialogueTarget.GetInstanceID() && __0!=dialogueSource && __0!=dialogueTranslation) return;
         try { if(__instance is TMP_Text label) FitSaveSlot(label); string original=__0; __0=Render(original,engine.Translate(__0)); if(__instance is TMP_Text choice && DialogueLayout.IsChoice(choice) && (__0!=original || engine.ContainsOriginal(original))) __0=TextFormatting.CapitalizeFirstVisible(__0); Capture(original,__0); Track(__instance,original,__0); }
         catch(Exception ex) { Warn(ex); }
@@ -196,7 +220,7 @@ public sealed class SpanishMod : MelonMod
     private static void EnableTMP(TMP_Text __instance)
     {
         if(engine==null || replacing) return;
-        if(PhoneText.IsMirror(__instance)) return;
+        if(PhoneText.IsMirror(__instance) || UpdateNotice.IsLabel(__instance)) return;
         try
         {
             FitSaveSlot(__instance);
@@ -270,20 +294,65 @@ public sealed class SpanishMod : MelonMod
 #endif
     }
 
-    public override void OnGUI()
+    public override void OnLateInitializeMelon()
     {
-        if(availableVersion==null || updateDismissed) return;
-        float width=Math.Min(460,UnityEngine.Screen.width-20);
-        float x=(UnityEngine.Screen.width-width)/2;
-        UnityEngine.GUI.Box(new UnityEngine.Rect(x,20,width,110),"Schedule I Translate - Nueva version: "+availableVersion);
-        UnityEngine.GUI.Label(new UnityEngine.Rect(x+15,48,width-30,25),"Hay una actualizacion disponible en GitHub.");
-        if(UnityEngine.GUI.Button(new UnityEngine.Rect(x+15,85,width-130,30),"Abrir descargas"))
-            UnityEngine.Application.OpenURL(UpdateChecker.ReleasesUrl);
-        if(UnityEngine.GUI.Button(new UnityEngine.Rect(x+width-105,85,90,30),"Cerrar")) updateDismissed=true;
+        // Mod Manager 2.2.x resolves JSON paths by mod display name with spaces replaced.
+        // No dependency on Mod Manager is needed for translation or updating.
+        try
+        {
+            if(updateDirectory.Length==0 || !MelonBase.RegisteredMelons.Any(m=>m.GetType().Namespace=="ModManagerPhoneApp")) return;
+            var category=MelonPreferences.GetCategory("ModManager&PhoneApp_JsonPaths") ?? MelonPreferences.CreateCategory("ModManager&PhoneApp_JsonPaths","JSON File Paths");
+            string key=Info.Name.Replace(" ","_");
+            var entry=category.GetEntry<string>(key);
+            string path=Path.Combine(updateDirectory,"updates.json");
+            if(entry==null) category.CreateEntry<string>(key,path,"Schedule I Translate updates.json");
+            else if(string.IsNullOrWhiteSpace(entry.Value)) entry.Value=path;
+            MelonPreferences.Save();
+        }
+        catch(Exception ex) { LoggerInstance.Warning("Mod Manager JSON settings: "+ex.Message); }
+    }
+
+    private void ReloadUpdateSettings()
+    {
+        if(updateDirectory.Length==0 || DateTime.UtcNow<nextSettingsRead) return;
+        nextSettingsRead=DateTime.UtcNow.AddSeconds(2);
+        string file=Path.Combine(updateDirectory,"updates.json");
+        var written=File.GetLastWriteTimeUtc(file);
+        if(written==settingsWrite) return;
+        settingsWrite=written;
+        try
+        {
+            var previous=updateSettings;
+            updateSettings=UpdateSettings.Load(updateDirectory,DefaultUpdateChecks);
+            updateNotice?.Dispose(); updateNotice=null; updateDismissed=false;
+            if(updateSettings.PreviewNotification && availableVersion==null) availableVersion="PRUEBA / TEST";
+            else if(!updateSettings.PreviewNotification && availableVersion=="PRUEBA / TEST") availableVersion=null;
+            if(updateSettings.CheckForUpdates && !previous.CheckForUpdates && updateCheck==null)
+                updateCheck=Task.Run(()=>UpdateChecker.CheckAsync(typeof(SpanishMod).Assembly.GetName().Version!,UpdateVariant));
+        }
+        catch(Exception ex) { LoggerInstance.Warning("updates.json: "+ex.Message); }
+    }
+
+    private void BeginUpdate()
+    {
+        if(installTask!=null || updateScheduled || !Version.TryParse(availableVersion,out var version)) return;
+        if(!updateSettings.AllowInGameUpdates) { UnityEngine.Application.OpenURL(UpdateChecker.ReleasesUrl); return; }
+        updateNotice?.Status(targetLanguage=="es" ? "Descargando y verificando..." : "Downloading and verifying...",targetLanguage=="es" ? "Descargando..." : "Downloading...",false);
+        installTask=Task.Run(()=>AutoUpdater.DownloadAndScheduleAsync(MelonEnvironment.GameRootDirectory,UpdateVariant,version));
     }
 
     public override void OnUpdate()
     {
+        ReloadUpdateSettings();
+        if(installTask is { IsCompleted:true })
+        {
+            var completedInstall=installTask; installTask=null;
+            updateScheduled=completedInstall.IsCompletedSuccessfully;
+            if(completedInstall.IsFaulted) LoggerInstance.Warning("Update download: "+completedInstall.Exception?.GetBaseException().Message);
+            updateNotice?.Status(updateScheduled ? (targetLanguage=="es" ? "Cierra el juego para instalar" : "Close the game to install") :
+                (targetLanguage=="es" ? "Descarga fallida. Puedes reintentar." : "Download failed. Try again."),
+                updateScheduled ? (targetLanguage=="es" ? "Lista para instalar" : "Ready to install") : (targetLanguage=="es" ? "Reintentar" : "Retry"),!updateScheduled);
+        }
         if(updateCheck is { IsCompleted:true })
         {
             var completed=updateCheck; updateCheck=null;
@@ -294,6 +363,19 @@ public sealed class SpanishMod : MelonMod
             }
             else if(completed.IsFaulted) LoggerInstance.Warning("No se pudo comprobar actualizaciones: "+completed.Exception?.GetBaseException().Message);
         }
+        if(availableVersion!=null && updateSettings.ShowUpdateNotice && !updateDismissed && updateNotice==null && TMP_Settings.defaultFontAsset!=null)
+        {
+            try
+            {
+                updateNotice=UpdateNotice.Create(availableVersion,targetLanguage=="es",updateSettings,BeginUpdate,()=>updateDismissed=true);
+                if(installTask!=null) updateNotice.Status(targetLanguage=="es" ? "Descargando y verificando..." : "Downloading and verifying...",targetLanguage=="es" ? "Descargando..." : "Downloading...",false);
+                else if(updateScheduled) updateNotice.Status(targetLanguage=="es" ? "Cierra el juego para instalar" : "Close the game to install",targetLanguage=="es" ? "Lista para instalar" : "Ready to install",false);
+                else if(!Version.TryParse(availableVersion,out _)) updateNotice.Status(targetLanguage=="es" ? "Vista previa del aviso" : "Notification preview",targetLanguage=="es" ? "Vista previa" : "Preview",false);
+            }
+            catch(Exception ex) { updateDismissed=true; LoggerInstance.Warning("Update notice: "+ex.Message); }
+        }
+        if(!automaticRequested && updateSettings.CheckForUpdates && updateSettings.AllowInGameUpdates && updateSettings.AutoDownloadUpdates && Version.TryParse(availableVersion,out _))
+        { automaticRequested=true; BeginUpdate(); }
 #if ONLINE
         if(online==null) return;
         if(DateTime.UtcNow>=nextRetry)
@@ -344,6 +426,7 @@ public sealed class SpanishMod : MelonMod
 
     public override void OnDeinitializeMelon()
     {
+        updateNotice?.Dispose(); updateNotice=null;
         capture?.Dispose(); capture=null;
         dialogueTarget=null;
         PhoneText.Clear();

@@ -56,7 +56,7 @@ public sealed class OnlineTranslator : IDisposable
         worker=Task.Run(Work);
     }
 
-    public bool IsEligible(string source) => !stopping.IsCancellationRequested && source.Length>=3 && source.Length<=2000 && source.Any(char.IsLetter) && !TranslationFilter.IsNonLinguistic(source) && !engine.ContainsOriginal(source) && learnedCount<CacheLimit;
+    public bool IsEligible(string source) => !stopping.IsCancellationRequested && source.Length>=3 && source.Length<=2000 && source.Any(char.IsLetter) && !PlaceNames.IsName(source) && !TranslationFilter.IsNonLinguistic(source) && !engine.ContainsOriginal(source) && learnedCount<CacheLimit;
 
     public bool Request(string source)
     {
@@ -103,7 +103,8 @@ public sealed class OnlineTranslator : IDisposable
     private async Task<string> Translate(string source,CancellationToken token)
     {
         var parts=new List<string>();
-        string protectedText=RankLabels.ProtectNumerals(source,value=> { parts.Add(value); return $"ZXQ{parts.Count-1:0000}QXZ"; });
+        string protectedText=PlaceNames.Protect(source,value=> { parts.Add(value); return $"ZXQ{parts.Count-1:0000}QXZ"; });
+        protectedText=RankLabels.ProtectNumerals(protectedText,value=> { parts.Add(value); return $"ZXQ{parts.Count-1:0000}QXZ"; });
         protectedText=(targetLanguage=="es" ? SpanishTerms : ProtectedNames).Replace(protectedText,m=> {
             string value=m.Value;
             if(targetLanguage=="es" && Glossary.TryGetValue(value,out var translated)) value=char.IsUpper(value[0]) ? char.ToUpperInvariant(translated[0])+translated[1..] : translated;
@@ -134,7 +135,7 @@ public sealed class OnlineTranslator : IDisposable
     private static bool Valid(string source,string value)
     {
         return source.Length<=2000 && value.Length>0 && value.Length<=8000 &&
-            RankLabels.NumeralsPreserved(source,value) &&
+            RankLabels.NumeralsPreserved(source,value) && PlaceNames.Preserved(source,value) &&
             Tokens.Matches(source).Cast<Match>().Select(m=>m.Value).OrderBy(s=>s).SequenceEqual(Tokens.Matches(value).Cast<Match>().Select(m=>m.Value).OrderBy(s=>s));
     }
 

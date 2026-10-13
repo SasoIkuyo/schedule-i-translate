@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net6.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><CheckEolTargetFramework>false</CheckEolTargetFramework></PropertyGroup>
   <ItemGroup>
+    <Compile Include="../DistributionMod/AutoUpdater.cs" Link="AutoUpdater.cs" />
+    <Compile Include="../DistributionMod/PlaceNames.cs" Link="PlaceNames.cs" />
     <Compile Include="../DistributionMod/UpdateChecker.cs" Link="UpdateChecker.cs" />
     <Compile Include="../DistributionMod/RankLabels.cs" Link="RankLabels.cs" />
     <Compile Include="../DistributionMod/PhoneWording.cs" Link="PhoneWording.cs" />

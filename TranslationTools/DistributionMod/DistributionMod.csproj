@@ -3,7 +3,7 @@
     <TargetFramework>net6.0</TargetFramework><AssemblyName>ScheduleISpanish</AssemblyName>
     <GameRoot Condition="'$(GameRoot)'==''">../..</GameRoot>
     <ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable>
-    <Version>1.4.5</Version><Authors>Saso</Authors><Company>Saso</Company>
+    <Version>1.4.6</Version><Authors>Saso</Authors><Company>Saso</Company>
     <DebugType>none</DebugType><DebugSymbols>false</DebugSymbols><Deterministic>true</Deterministic>
     <ModMode Condition="'$(ModMode)'==''">Offline</ModMode>
     <AssemblyName Condition="'$(ModMode)'=='Online'">ScheduleTranslate</AssemblyName>
@@ -17,7 +17,6 @@
     <Reference Include="Il2CppInterop.Runtime"><HintPath>$(GameRoot)/MelonLoader/net6/Il2CppInterop.Runtime.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Il2Cppmscorlib"><HintPath>$(GameRoot)/MelonLoader/Il2CppAssemblies/Il2Cppmscorlib.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.CoreModule"><HintPath>$(GameRoot)/MelonLoader/Il2CppAssemblies/UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
-    <Reference Include="UnityEngine.IMGUIModule"><HintPath>$(GameRoot)/MelonLoader/Il2CppAssemblies/UnityEngine.IMGUIModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.UI"><HintPath>$(GameRoot)/MelonLoader/Il2CppAssemblies/UnityEngine.UI.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.TextRenderingModule"><HintPath>$(GameRoot)/MelonLoader/Il2CppAssemblies/UnityEngine.TextRenderingModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.UIModule"><HintPath>$(GameRoot)/MelonLoader/Il2CppAssemblies/UnityEngine.UIModule.dll</HintPath><Private>false</Private></Reference>

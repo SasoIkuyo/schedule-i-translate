@@ -1,6 +1,6 @@
 # Compilar / Build
 
-Esta rama publica el código de la versión 1.4.4 y sus pruebas para facilitar su revisión. Los commits agrupan los componentes existentes por función; no representan fechas originales de desarrollo. Los archivos del juego y las dependencias de MelonLoader no se distribuyen aquí.
+Esta rama publica el código de la versión 1.4.6 y sus pruebas para facilitar su revisión. Los commits agrupan los componentes existentes por función; no representan fechas originales de desarrollo. Los archivos del juego y las dependencias de MelonLoader no se distribuyen aquí.
 
 ## Requisitos
 
@@ -43,7 +43,7 @@ La URL usada actualmente no lleva clave API, credenciales ni identificador de pr
 
 ## English
 
-This branch publishes the source and tests for version 1.4.4. Commits group existing components by function, rather than representing their original development dates. Game files and MelonLoader dependencies are not bundled.
+This branch publishes the source and tests for version 1.4.6. Commits group existing components by function, rather than representing their original development dates. Game files and MelonLoader dependencies are not bundled.
 
 Install an SDK capable of building `net6.0` projects and generate MelonLoader's IL2CPP assemblies using your own game installation. Run the commands above from the repository root, replacing `GameRoot` with your game directory. Build both variants before running tests. Tests mock network requests; `-- --live` additionally contacts Google.
 
@@ -52,3 +52,6 @@ Install an SDK capable of building `net6.0` projects and generate MelonLoader's 
 Review `OnlineTranslator.cs` for the network endpoint, text sent, request limits and saved cache. The current endpoint uses no API key, owner credentials or Google Cloud project. Installing a release requires copying the DLL, with no scripts to run.
 
 Online genera `ScheduleTranslate.dll`; Offline genera `ScheduleISpanish.dll`. `SpanishCorrections.txt` permite revisar las correcciones editoriales incorporadas en el diccionario; no se carga como archivo externo durante el juego. La reconstrucción usa el recurso gzip integrado.
+
+
+Updater checks: `dotnet run --project TranslationTools/DistributionTests -c Release -- --updater-self-test` exercises the installer in an isolated folder, including process-exit waiting, SHA256, assembly version, variant, backup, Unicode paths and rejection of tampered payloads. Windows PowerShell is used only by the generated helper; it is not a bundled dependency. Source: `AutoUpdater.cs`, `UpdateChecker.cs`, `UpdateNotice.cs`, `PlaceNames.cs`.

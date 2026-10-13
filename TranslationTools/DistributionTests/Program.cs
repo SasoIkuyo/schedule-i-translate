@@ -3,6 +3,57 @@ using System.IO.Compression;
 using System.Reflection;
 
 void Assert(bool condition,string message) { if(!condition) throw new Exception(message); }
+if(args.Contains("--updater-self-test"))
+{
+    byte[] dll=File.ReadAllBytes("TranslationTools/DistributionMod/bin/Online/Release/net6.0/ScheduleTranslate.dll");
+    byte[] Zip(string name)
+    {
+        using var bytes=new MemoryStream();
+        using(var zip=new ZipArchive(bytes,ZipArchiveMode.Create,true))
+        using(var entry=zip.CreateEntry(name).Open()) entry.Write(dll);
+        return bytes.ToArray();
+    }
+    string Hash(byte[] bytes)=>"sha256:"+Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes)).ToLowerInvariant();
+    byte[] archive=Zip("Mods/ScheduleTranslate.dll");
+    Assert(AutoUpdater.VerifyArchive(archive,Hash(archive),"Online",new Version("1.4.6")).SequenceEqual(dll),"Valid update archive rejected");
+    bool Fails(Action check) { try { check(); return false; } catch(InvalidDataException) { return true; } }
+    Assert(Fails(()=>AutoUpdater.VerifyArchive(archive,"sha256:bad","Online",new Version("1.4.6"))),"Invalid hash accepted");
+    Assert(Fails(()=>AutoUpdater.VerifyArchive(archive,Hash(archive),"Offline",new Version("1.4.6"))),"Wrong variant accepted");
+    Assert(Fails(()=>AutoUpdater.VerifyArchive(archive,Hash(archive),"Online",new Version("9.0.0"))),"Wrong version accepted");
+    var unsafeZip=Zip("../ScheduleTranslate.dll");
+    Assert(Fails(()=>AutoUpdater.VerifyArchive(unsafeZip,Hash(unsafeZip),"Online",new Version("1.4.6"))),"Traversal ZIP accepted");
+    string testRoot=Path.GetFullPath(Path.Combine("TranslationTools","UpdaterTestRuns",Guid.NewGuid().ToString(),"actualizaci\u00f3n's"));
+    Directory.CreateDirectory(Path.Combine(testRoot,"Mods"));
+    string target=Path.Combine(testRoot,"Mods","ScheduleTranslate.dll");
+    byte[] oldDll=new byte[]{1,2,3}; File.WriteAllBytes(target,oldDll);
+    string powershell=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System),"WindowsPowerShell","v1.0","powershell.exe");
+    using var dummy=System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(powershell,"-NoProfile -NonInteractive -Command \"Start-Sleep -Seconds 3\"") {UseShellExecute=false,CreateNoWindow=true,WindowStyle=System.Diagnostics.ProcessWindowStyle.Hidden})!;
+    string helper=AutoUpdater.PrepareInstall(testRoot,"Online",dll,dummy.Id,dummy.StartTime.ToUniversalTime().Ticks);
+    AutoUpdater.StartHelper(helper);
+    await Task.Delay(700);
+    Assert(File.ReadAllBytes(target).SequenceEqual(oldDll),"Installer replaced DLL before game exit");
+    await dummy.WaitForExitAsync();
+    string folder=Path.GetDirectoryName(helper)!,status=Path.Combine(folder,"status.txt");
+    var deadline=DateTime.UtcNow.AddSeconds(20);
+    while(File.ReadAllText(status)=="waiting-for-game-exit" && DateTime.UtcNow<deadline) await Task.Delay(200);
+    Assert(File.ReadAllText(status)=="installed","Installer failed: "+File.ReadAllText(status));
+    Assert(File.ReadAllBytes(target).SequenceEqual(dll),"New DLL not installed");
+    Assert(File.ReadAllBytes(Path.Combine(folder,"previous.dll")).SequenceEqual(oldDll),"Backup missing");
+    helper=AutoUpdater.PrepareInstall(testRoot,"Online",dll,int.MaxValue,0);
+    File.WriteAllBytes(Path.Combine(folder,"pending.dll"),new byte[]{9});
+    AutoUpdater.StartHelper(helper);
+    deadline=DateTime.UtcNow.AddSeconds(10);
+    while(File.ReadAllText(status)=="waiting-for-game-exit" && DateTime.UtcNow<deadline) await Task.Delay(200);
+    Assert(File.ReadAllText(status).StartsWith("failed:"),"Tampered stage accepted");
+    Assert(File.ReadAllBytes(target).SequenceEqual(dll),"Tamper failure changed installed DLL");
+    var settings=UpdateSettings.Load(testRoot,true);
+    Assert(settings.AllowInGameUpdates && !settings.AutoDownloadUpdates,"Unsafe automatic download default");
+    File.WriteAllText(Path.Combine(testRoot,"updates.json"),"{\"NoticeOpacity\":2}");
+    Assert(Fails(()=>UpdateSettings.Load(testRoot,true)),"Invalid opacity accepted");
+    Console.WriteLine("Updater verified: SHA256, DLL identity/version, variant, traversal rejection, process-exit wait, atomic replacement, backup, tamper rejection, Unicode/quoted paths and config bounds.");
+    Console.WriteLine("Isolated test artifacts: "+testRoot);
+    return;
+}
 if(args.Contains("--embed-spanish-cache"))
 {
     string dictionary="TranslationTools/DistributionMod/Dictionary.txt.gz";
@@ -92,6 +143,23 @@ TranslationEngine Load(string mode)
     return result;
 }
 var offline=Load("Offline"); var onlineEngine=Load("Online");
+foreach(string place in new[]{"Northtown","Downtown","Suburbia","Docks","Uptown","Westville","Barn","Bungalow","Storage Unit","Motel Room","Car Wash","Behind Handy Hank's"})
+    Assert(offline.Translate(place)==place,"Place name changed: "+place);
+Assert(offline.Translate("<color=blue>Downtown</color>")=="<color=blue>Downtown</color>","Colored region changed");
+var placeEngine=new TranslationEngine();
+placeEngine.Load(new StringReader("Downtown=Centro\nBarn=Granero\nGo to Downtown=Ve a Centro\nDeliver to <PROPERTY>=Entrega en <PROPERTY>\nNew destination: <LOCATION>=Nuevo destino: <LOCATION>\n"));
+Assert(placeEngine.Translate("Go to Downtown")=="Ve a Downtown","Dictionary sentence changed destination");
+Assert(placeEngine.Translate("Deliver to Barn")=="Entrega en Barn","Property template translated name");
+Assert(placeEngine.Translate("New destination: My Custom House")=="Nuevo destino: My Custom House","Custom location slot changed");
+placeEngine.AddLearned("Travel to Downtown","Viaja al Centro");
+Assert(placeEngine.Translate("Travel to Downtown")=="Viaja al Downtown","Old learned place name not restored");
+Assert(!PlaceNames.Preserved("Travel to Downtown","Viaja al Centro"),"Changed destination accepted");
+Assert(PlaceNames.Preserved("Travel to Downtown","Viaja a Downtown"),"Preserved destination rejected");
+Assert(PlaceNames.Protect("Barnacle near Barn",_=>"TOKEN")=="Barnacle near TOKEN","Place matching ignored word boundary");
+PlaceNames.Register("My Custom House");
+Assert(PlaceNames.IsName("My Custom House") && PlaceNames.Protect("Visit My Custom House",_=>"TOKEN")=="Visit TOKEN","Runtime property name was not protected");
+Console.WriteLine("Place names: labels, colored regions, dictionary sentences, property/custom location slots and old cache protection passed.");
+
 onlineEngine.AddLearned("Hustler I","Estafador yo");
 Assert(onlineEngine.Translate("Hustler I")=="Estafador I","Bad cached rank overrides Roman numeral");
 Assert(offline.Translate("Hustler II")=="Estafador II","Rank II changed");
@@ -142,7 +210,7 @@ Assert(SpanishGrammar.TranslateTimeSpan("6:00 PM")=="6:00 PM","Meeting clock cha
 Assert(PhoneWording.Compact("Pseudoefedrina de baja calidad")=="Pseudo (baja calidad)","Phone product alias");
 Assert(PhoneWording.Compact("Se desbloquea en Hustler III")=="Requiere Hustler III","Phone rank alias");
 Assert(PhoneWording.Compact("Granddaddy Purple")=="Granddaddy Purple","Phone alias changes strain name");
-Assert(phoneMeeting=="Vale, nos vemos frente al motel entre las 6:00 PM y las 12:00 AM.","Phone meeting location/time: "+phoneMeeting);
+Assert(phoneMeeting=="Vale, nos vemos in front of the motel entre las 6:00 PM y las 12:00 AM.","Phone meeting location/time: "+phoneMeeting);
 Assert(offline.Translate("Use Packaging Station")=="Usar estación de envasado","Packaging interaction prompt");
 Assert(offline.Translate("Use Mixing Station")=="Usar "+offline.Translate("Mixing Station"),"Other known-item interaction prompt");
 Assert(offline.Translate("Today")=="Hoy" && offline.Translate("Last Played")=="Jugado" && offline.Translate("Net worth")=="Patrimonio","Save screen captions/date");
@@ -217,6 +285,13 @@ using(var failure=new OnlineTranslator(restarted,fixture,(text,token)=>throw new
     Assert((await Take(failure)).Translation==null,"Failed result accepted");
     Assert(!failure.Request("Network failure sample"),"No failure cooldown");
     Assert(restarted.Translate("Save game")=="Guardar partida","Network failure damaged local translations");
+}
+
+using(var places=new OnlineTranslator(new TranslationEngine(),fixture,(text,token)=>Task.FromResult("Visita "+text["Visit ".Length..]),targetLanguage:"fr"))
+{
+    Assert(!places.Request("Downtown"),"Region label sent online");
+    Assert(places.Request("Visit Downtown"),"Place sentence not queued");
+    Assert((await Take(places)).Translation=="Visita Downtown","Online place name protection failed");
 }
 var block=new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
 using(var queue=new OnlineTranslator(restarted,fixture,(text,token)=>block.Task.WaitAsync(token)))
