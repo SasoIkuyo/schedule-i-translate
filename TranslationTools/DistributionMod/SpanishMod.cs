@@ -8,9 +8,9 @@ using System.Text.Json;
 using System.IO.Compression;
 
 #if ONLINE
-[assembly: MelonInfo(typeof(ScheduleISpanish.SpanishMod),"Schedule I Translate Online","1.4.6","Saso")]
+[assembly: MelonInfo(typeof(ScheduleISpanish.SpanishMod),"Schedule I Translate Online","1.4.7","Saso")]
 #else
-[assembly: MelonInfo(typeof(ScheduleISpanish.SpanishMod),"Schedule I Spanish Offline","1.4.6","Saso")]
+[assembly: MelonInfo(typeof(ScheduleISpanish.SpanishMod),"Schedule I Spanish Offline","1.4.7","Saso")]
 #endif
 [assembly: MelonGame("TVGS","Schedule I")]
 
@@ -22,6 +22,7 @@ public sealed class SpanishMod : MelonMod
     private string? availableVersion;
     private bool updateDismissed;
     private UpdateNotice? updateNotice;
+    private ModSettingsMenu? settingsMenu;
     private UpdateSettings updateSettings=new();
     private string updateDirectory="";
     private DateTime settingsWrite,nextSettingsRead;
@@ -296,6 +297,9 @@ public sealed class SpanishMod : MelonMod
 
     public override void OnLateInitializeMelon()
     {
+        if(updateDirectory.Length==0) return;
+        try { settingsMenu=new ModSettingsMenu(Info.Name,updateDirectory,DefaultUpdateChecks,message=>LoggerInstance.Msg(message)); }
+        catch(Exception ex) { LoggerInstance.Warning("Settings controls: "+ex.Message); }
         // Mod Manager 2.2.x resolves JSON paths by mod display name with spaces replaced.
         // No dependency on Mod Manager is needed for translation or updating.
         try
@@ -343,6 +347,7 @@ public sealed class SpanishMod : MelonMod
 
     public override void OnUpdate()
     {
+        settingsMenu?.Poll();
         ReloadUpdateSettings();
         if(installTask is { IsCompleted:true })
         {

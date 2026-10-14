@@ -167,6 +167,7 @@ Source and tests: [source branch](https://github.com/SasoIkuyo/schedule-i-transl
 
 | Versión / Version | Cambios principales | Main changes |
 | --- | --- | --- |
+| [1.4.7](https://github.com/SasoIkuyo/schedule-i-translate/releases/tag/v1.4.7) | Controles nativos en Mod Manager para idioma, texto del teléfono, actualizaciones y aviso. | Native Mod Manager controls for language, phone text, updates and notice appearance. |
 | [1.4.6](https://github.com/SasoIkuyo/schedule-i-translate/releases/tag/v1.4.6) | Nombres de lugares protegidos, botones + y - nativos, aviso transparente, actualización desde el juego y JSON para Mod Manager. | Protected place names, native + and - buttons, translucent notice, in-game updates and Mod Manager JSON settings. |
 | [1.4.5](https://github.com/SasoIkuyo/schedule-i-translate/releases/tag/v1.4.5) | 533 traducciones nuevas integradas y comprobación de actualizaciones. | 533 new embedded translations and update checking. |
 | [1.4.4](https://github.com/SasoIkuyo/schedule-i-translate/releases/tag/v1.4.4) | Números romanos protegidos en **todos los idiomas**, con rechazo de caché incorrecta. Los nombres de rango se traducen localmente en español y mediante Google en los demás idiomas. | Roman numerals protected in **all languages**, with invalid-cache filtering. Rank names use local Spanish translations or Google for other languages. |
@@ -183,13 +184,25 @@ Source and tests: [source branch](https://github.com/SasoIkuyo/schedule-i-transl
 
 533 traducciones adicionales integradas (12.295 entradas) y aviso opcional de nuevas versiones. / 533 additional embedded Spanish translations (12,295 entries) and update notifications.
 
+## Otros ajustes en Mod Manager / More Mod Manager settings
+
+Desde la **1.4.7**, selecciona nuestro mod en **Mods > Config** o en la aplicación de ajustes del teléfono. Aparecen campos e interruptores normales, sin tener que editar JSON:
+
+- **Idioma / Language** (solo Online): `TargetLanguage`, por ejemplo `es`, `en`, `fr`, `de`, `pt` o `zh-CN`. Requiere reiniciar.
+- **Texto del teléfono / Phone text**: activar la fuente nítida (`UseSdfPhoneText`) y elegir nitidez 1 o 2 (`PhoneTextScale`). Requiere reiniciar.
+- **Actualizaciones y aviso / Updates and notice**: buscar novedades, actualizar desde el juego, descargar automáticamente, mostrar el aviso, ajustar opacidad/tamaño y activar la vista previa. Se aplica durante la sesión.
+
+Los valores se sincronizan con `language.json`, `display.json` y `updates.json`, en `UserData/ScheduleISpanish`. Los archivos JSON siguen funcionando sin Mod Manager; se conservan los ajustes actuales y los campos adicionales. Los valores no válidos se rechazan y se recupera el último valor válido. La opción Reset de Mod Manager restaura los valores predeterminados de los controles. La protección de nombres y los botones originales del juego permanecen activos.
+
+**English:** Version 1.4.7 adds native Mod Manager controls for Online target language, phone font/sharpness, update checking/downloading and notice appearance. Language and phone changes require restarting; update-notice options apply during the session. Controls sync with the existing JSON files, preserve additional fields and reject invalid values. Mod Manager is optional; JSON configuration still works independently.
+
 ## Actualizaciones y Mod Manager / Updates and Mod Manager
 
 Desde la 1.4.6, el aviso tiene fondo semitransparente y un botón **Actualizar**: descarga el ZIP oficial, comprueba SHA-256, variante y versión de la DLL. Cuando cierres el juego, un instalador oculto reemplaza la DLL de forma atómica y conserva la anterior en `UserData/ScheduleISpanish/Updates/<variante>/previous.dll`. La versión nueva se carga al abrir el juego otra vez. No es necesario abrir GitHub ni ejecutar scripts manualmente; solo distribuyes nuestra DLL. El mod genera internamente un script de PowerShell para instalarla después del cierre. No cierra el juego ni toca partidas, ajustes o cachés.
 
 La consulta se realiza una vez al iniciar e incluye versiones preliminares publicadas con ZIP para tu variante. Offline traduce sin conexión: su consulta de actualizaciones está desactivada por defecto. Para pasar de la 1.4.5 a la 1.4.6 hay que instalar la DLL manualmente una vez; la actualización desde el juego funciona a partir de la 1.4.6.
 
-Configuración: `UserData/ScheduleISpanish/updates.json`. Si está instalado **Mod Manager & Phone App 2.2.x**, el mod registra automáticamente esta ruta en su editor JSON. También puedes asignarla manualmente al mod. Mod Manager es opcional. Los ajustes del aviso se recargan cada dos segundos; si el JSON no es válido, se conservan los últimos ajustes válidos.
+Configuración: `UserData/ScheduleISpanish/updates.json`. Si está instalado **Mod Manager & Phone App 2.2.x**, el mod registra esta ruta JSON; desde la 1.4.7 también muestra controles nativos. Puedes editar los JSON manualmente si lo prefieres. Mod Manager es opcional. Los ajustes del aviso se recargan cada dos segundos; si el JSON no es válido, se conservan los últimos ajustes válidos.
 
 ```json
 {

@@ -3,7 +3,7 @@
     <TargetFramework>net6.0</TargetFramework><AssemblyName>ScheduleISpanish</AssemblyName>
     <GameRoot Condition="'$(GameRoot)'==''">../..</GameRoot>
     <ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable>
-    <Version>1.4.6</Version><Authors>Saso</Authors><Company>Saso</Company>
+    <Version>1.4.7</Version><Authors>Saso</Authors><Company>Saso</Company>
     <DebugType>none</DebugType><DebugSymbols>false</DebugSymbols><Deterministic>true</Deterministic>
     <ModMode Condition="'$(ModMode)'==''">Offline</ModMode>
     <AssemblyName Condition="'$(ModMode)'=='Online'">ScheduleTranslate</AssemblyName>

@@ -1,6 +1,6 @@
 # Compilar / Build
 
-Esta rama publica el código de la versión 1.4.6 y sus pruebas para facilitar su revisión. Los commits agrupan los componentes existentes por función; no representan fechas originales de desarrollo. Los archivos del juego y las dependencias de MelonLoader no se distribuyen aquí.
+Esta rama publica el código de la versión 1.4.7 y sus pruebas para facilitar su revisión. Los commits agrupan los componentes existentes por función; no representan fechas originales de desarrollo. Los archivos del juego y las dependencias de MelonLoader no se distribuyen aquí.
 
 ## Requisitos
 
@@ -43,7 +43,7 @@ La URL usada actualmente no lleva clave API, credenciales ni identificador de pr
 
 ## English
 
-This branch publishes the source and tests for version 1.4.6. Commits group existing components by function, rather than representing their original development dates. Game files and MelonLoader dependencies are not bundled.
+This branch publishes the source and tests for version 1.4.7. Commits group existing components by function, rather than representing their original development dates. Game files and MelonLoader dependencies are not bundled.
 
 Install an SDK capable of building `net6.0` projects and generate MelonLoader's IL2CPP assemblies using your own game installation. Run the commands above from the repository root, replacing `GameRoot` with your game directory. Build both variants before running tests. Tests mock network requests; `-- --live` additionally contacts Google.
 
@@ -55,3 +55,5 @@ Online genera `ScheduleTranslate.dll`; Offline genera `ScheduleISpanish.dll`. `S
 
 
 Updater checks: `dotnet run --project TranslationTools/DistributionTests -c Release -- --updater-self-test` exercises the installer in an isolated folder, including process-exit waiting, SHA256, assembly version, variant, backup, Unicode paths and rejection of tampered payloads. Windows PowerShell is used only by the generated helper; it is not a bundled dependency. Source: `AutoUpdater.cs`, `UpdateChecker.cs`, `UpdateNotice.cs`, `PlaceNames.cs`.
+
+`ModSettingsMenu.cs` exposes native MelonPreferences categories and synchronizes them with the existing JSON files. Language and phone changes require restarting. Update-notice changes apply during the session.

@@ -36,7 +36,7 @@ public static class AutoUpdater
     {
         FileName(variant);
         using var client=new HttpClient {Timeout=TimeSpan.FromSeconds(60),MaxResponseContentBufferSize=8*1024*1024};
-        client.DefaultRequestHeaders.UserAgent.ParseAdd("ScheduleITranslate-Updater/1.4.6");
+        client.DefaultRequestHeaders.UserAgent.ParseAdd("ScheduleITranslate-Updater/1.4.7");
         string json=await client.GetStringAsync("https://api.github.com/repos/SasoIkuyo/schedule-i-translate/releases?per_page=100").ConfigureAwait(false);
         using var document=JsonDocument.Parse(json);
         var release=document.RootElement.EnumerateArray().First(r=>!r.GetProperty("draft").GetBoolean() &&

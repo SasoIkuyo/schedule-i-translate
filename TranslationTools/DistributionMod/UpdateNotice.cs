@@ -56,7 +56,7 @@ internal sealed class UpdateNotice : IDisposable
         Label(card,"SCHEDULE I TRANSLATE",22,124,300,22,11,Muted,FontStyles.Normal);
         Label(card,spanish ? "Nueva actualización" : "New update available",22,91,348,30,22,Ink,FontStyles.Bold);
         string detail=version.Contains("TEST",StringComparison.Ordinal) ?
-            (spanish ? "Versión 1.4.6 · Vista previa" : "Version 1.4.6 · Preview") :
+            (spanish ? "Versión 1.4.7 · Vista previa" : "Version 1.4.7 · Preview") :
             (spanish ? "Versión " : "Version ")+version+(spanish ? " disponible" : " available");
         detailLabel=Label(card,detail,22,66,354,24,15,Muted);
         var download=Panel(card,"Download",Blue);

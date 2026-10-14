@@ -14,14 +14,15 @@ if(args.Contains("--updater-self-test"))
         return bytes.ToArray();
     }
     string Hash(byte[] bytes)=>"sha256:"+Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes)).ToLowerInvariant();
+    var testVersion=System.Reflection.AssemblyName.GetAssemblyName("TranslationTools/DistributionMod/bin/Online/Release/net6.0/ScheduleTranslate.dll").Version!;
     byte[] archive=Zip("Mods/ScheduleTranslate.dll");
-    Assert(AutoUpdater.VerifyArchive(archive,Hash(archive),"Online",new Version("1.4.6")).SequenceEqual(dll),"Valid update archive rejected");
+    Assert(AutoUpdater.VerifyArchive(archive,Hash(archive),"Online",testVersion).SequenceEqual(dll),"Valid update archive rejected");
     bool Fails(Action check) { try { check(); return false; } catch(InvalidDataException) { return true; } }
-    Assert(Fails(()=>AutoUpdater.VerifyArchive(archive,"sha256:bad","Online",new Version("1.4.6"))),"Invalid hash accepted");
-    Assert(Fails(()=>AutoUpdater.VerifyArchive(archive,Hash(archive),"Offline",new Version("1.4.6"))),"Wrong variant accepted");
+    Assert(Fails(()=>AutoUpdater.VerifyArchive(archive,"sha256:bad","Online",testVersion)),"Invalid hash accepted");
+    Assert(Fails(()=>AutoUpdater.VerifyArchive(archive,Hash(archive),"Offline",testVersion)),"Wrong variant accepted");
     Assert(Fails(()=>AutoUpdater.VerifyArchive(archive,Hash(archive),"Online",new Version("9.0.0"))),"Wrong version accepted");
     var unsafeZip=Zip("../ScheduleTranslate.dll");
-    Assert(Fails(()=>AutoUpdater.VerifyArchive(unsafeZip,Hash(unsafeZip),"Online",new Version("1.4.6"))),"Traversal ZIP accepted");
+    Assert(Fails(()=>AutoUpdater.VerifyArchive(unsafeZip,Hash(unsafeZip),"Online",testVersion)),"Traversal ZIP accepted");
     string testRoot=Path.GetFullPath(Path.Combine("TranslationTools","UpdaterTestRuns",Guid.NewGuid().ToString(),"actualizaci\u00f3n's"));
     Directory.CreateDirectory(Path.Combine(testRoot,"Mods"));
     string target=Path.Combine(testRoot,"Mods","ScheduleTranslate.dll");
